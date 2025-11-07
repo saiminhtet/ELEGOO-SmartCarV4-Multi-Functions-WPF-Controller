@@ -33,7 +33,7 @@ A modern Windows desktop application for controlling the ELEGOO Smart Car V4 wit
 ## Installation
 
 ```bash
-cd D:\Research&Development\ELEGOOSmartCarV4\SmartCar\SmartCar\SmartCar
+cd SmartCar\SmartCar
 dotnet restore
 dotnet build
 ```
