@@ -96,14 +96,18 @@
                 Padding="15"
                 Margin="0,20,0,0">
             <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Connection Status -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <!-- Connection Status (Top Left) -->
+                <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="0,0,20,5">
                     <Ellipse x:Name="ConnectionIndicator"
                              Width="12"
                              Height="12"
@@ -116,8 +120,22 @@
                                VerticalAlignment="Center"/>
                 </StackPanel>
 
-                <!-- Video Status -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                <!-- Mode Status (Top Center) -->
+                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,5">
+                    <TextBlock Text="Mode: "
+                               Foreground="#AAA"
+                               FontSize="14"
+                               VerticalAlignment="Center"/>
+                    <TextBlock x:Name="CurrentModeText"
+                               Text="0 - Manual"
+                               Foreground="#4EC9B0"
+                               FontSize="14"
+                               FontWeight="Bold"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Video Status (Top Right) -->
+                <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" Margin="0,0,0,5">
                     <TextBlock Text="Video: "
                                Foreground="#AAA"
                                FontSize="14"
@@ -127,6 +145,27 @@
                                Foreground="#AAA"
                                FontSize="14"
                                FontWeight="Bold"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Joystick Status (Bottom, Spanning all columns) -->
+                <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,0">
+                    <TextBlock Text="Joystick: "
+                               Foreground="#AAA"
+                               FontSize="12"
+                               VerticalAlignment="Center"/>
+                    <TextBlock x:Name="JoystickStatusText"
+                               Text="Disabled"
+                               Foreground="#AAA"
+                               FontSize="12"
+                               FontWeight="Bold"
+                               VerticalAlignment="Center"
+                               Margin="0,0,10,0"/>
+                    <TextBlock x:Name="JoystickDeviceText"
+                               Text=""
+                               Foreground="#888"
+                               FontSize="11"
+                               FontStyle="Italic"
                                VerticalAlignment="Center"/>
                 </StackPanel>
             </Grid>

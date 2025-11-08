@@ -61,11 +61,13 @@ namespace SmartCarExample
                 joystickController.ButtonReleased += OnJoystickButtonReleased;
                 Console.WriteLine($"✓ Joystick ready: {joystickController.DeviceName}");
                 Console.WriteLine("Press 'J' to enable joystick control");
+                UpdateJoystickDisplay();
             }
             else
             {
                 Console.WriteLine("✗ No joystick detected - keyboard control only");
                 joystickController = null;
+                UpdateJoystickDisplay();
             }
 
             // Connect to smart car
@@ -84,6 +86,7 @@ namespace SmartCarExample
             {
                 Console.WriteLine("SUCCESS: Connected to car");
                 UpdateStatus("Connected - Press WASD to drive!");
+                UpdateModeDisplay(0); // Car starts in Mode 0 (Manual)
             }
         }
 
@@ -161,24 +164,28 @@ namespace SmartCarExample
                 case Key.D0: // Key 0 - Manual/Normal Mode
                     connectionManager.SwitchMode(0);
                     UpdateStatus("Mode 0: Manual/Normal - Drive with WASD");
+                    UpdateModeDisplay(0);
                     videoWindow?.UpdateMode(0);
                     videoWindow?.UpdateCarStatus("Manual Control");
                     return;
                 case Key.D1: // Key 1 - Line Detection Mode
                     connectionManager.SwitchMode(1);
                     UpdateStatus("Mode 1: Line Detection");
+                    UpdateModeDisplay(1);
                     videoWindow?.UpdateMode(1);
                     videoWindow?.UpdateCarStatus("Autonomous - Following Line");
                     return;
                 case Key.D2: // Key 2 - Obstacle Detection Mode
                     connectionManager.SwitchMode(2);
                     UpdateStatus("Mode 2: Obstacle Detection");
+                    UpdateModeDisplay(2);
                     videoWindow?.UpdateMode(2);
                     videoWindow?.UpdateCarStatus("Autonomous - Avoiding Obstacles");
                     return;
                 case Key.D3: // Key 3 - Follow Mode
                     connectionManager.SwitchMode(3);
                     UpdateStatus("Mode 3: Follow Mode");
+                    UpdateModeDisplay(3);
                     videoWindow?.UpdateMode(3);
                     videoWindow?.UpdateCarStatus("Autonomous - Following Object");
                     return;
@@ -396,6 +403,53 @@ namespace SmartCarExample
             });
         }
 
+        private void UpdateModeDisplay(int mode)
+        {
+            Dispatcher.InvokeAsync(() =>
+            {
+                string modeText = mode switch
+                {
+                    0 => "0 - Manual",
+                    1 => "1 - Line Detection",
+                    2 => "2 - Obstacle Avoidance",
+                    3 => "3 - Follow Mode",
+                    _ => "Unknown"
+                };
+                CurrentModeText.Text = modeText;
+
+                // Update color based on mode
+                var color = mode > 0
+                    ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 193, 7)) // Orange for autonomous
+                    : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(78, 201, 176)); // Green for manual
+                CurrentModeText.Foreground = color;
+            });
+        }
+
+        private void UpdateJoystickDisplay()
+        {
+            Dispatcher.InvokeAsync(() =>
+            {
+                if (joystickController == null)
+                {
+                    JoystickStatusText.Text = "Not Connected";
+                    JoystickStatusText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(170, 170, 170)); // Gray
+                    JoystickDeviceText.Text = "";
+                }
+                else if (joystickEnabled)
+                {
+                    JoystickStatusText.Text = "Enabled";
+                    JoystickStatusText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(78, 201, 176)); // Green
+                    JoystickDeviceText.Text = $"({joystickController.DeviceName})";
+                }
+                else
+                {
+                    JoystickStatusText.Text = "Disabled";
+                    JoystickStatusText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(170, 170, 170)); // Gray
+                    JoystickDeviceText.Text = $"({joystickController.DeviceName})";
+                }
+            });
+        }
+
         private void ToggleJoystickMode()
         {
             if (joystickController == null)
@@ -412,6 +466,7 @@ namespace SmartCarExample
             {
                 joystickController.Start();
                 UpdateStatus($"Joystick Enabled: {joystickController.DeviceName}");
+                UpdateJoystickDisplay();
                 Console.WriteLine($"[Joystick] Enabled - {joystickController.DeviceName}");
             }
             else
@@ -425,6 +480,7 @@ namespace SmartCarExample
                     connectionManager.SendCommand(SmartCar.SmartCarCommands.JoystickClear());
                 }
                 UpdateStatus("Joystick Disabled - Keyboard Control");
+                UpdateJoystickDisplay();
                 Console.WriteLine("[Joystick] Disabled");
             }
         }
