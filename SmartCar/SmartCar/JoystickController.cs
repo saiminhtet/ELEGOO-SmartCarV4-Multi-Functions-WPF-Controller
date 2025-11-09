@@ -3,11 +3,13 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SharpDX.DirectInput;
+using NLog;
 
 namespace SmartCar
 {
     public class JoystickController : IDisposable
     {
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private DirectInput _directInput;
         private Joystick? _joystick;
         private CancellationTokenSource? _cancellationSource;
@@ -47,7 +49,7 @@ namespace SmartCar
                 foreach (var deviceInstance in _directInput.GetDevices(DeviceType.Joystick, DeviceEnumerationFlags.AllDevices))
                 {
                     joystickGuid = deviceInstance.InstanceGuid;
-                    Console.WriteLine($"[Joystick] Found: {deviceInstance.ProductName}");
+                    Logger.Info($"Found: {deviceInstance.ProductName}");
                     break; // Use first joystick found
                 }
 
@@ -57,20 +59,20 @@ namespace SmartCar
                     foreach (var deviceInstance in _directInput.GetDevices(DeviceType.Gamepad, DeviceEnumerationFlags.AllDevices))
                     {
                         joystickGuid = deviceInstance.InstanceGuid;
-                        Console.WriteLine($"[Joystick] Found gamepad: {deviceInstance.ProductName}");
+                        Logger.Info($"Found gamepad: {deviceInstance.ProductName}");
                         break;
                     }
                 }
 
                 if (joystickGuid == Guid.Empty)
                 {
-                    Console.WriteLine("[Joystick] ERROR: No joystick or gamepad found");
+                    Logger.Warn("No joystick or gamepad found");
                     return false;
                 }
 
                 // Instantiate the joystick
                 _joystick = new Joystick(_directInput, joystickGuid);
-                Console.WriteLine($"[Joystick] Initialized: {_joystick.Information.ProductName}");
+                Logger.Info($"Initialized: {_joystick.Information.ProductName}");
 
                 // Set cooperative level
                 _joystick.Properties.BufferSize = 128;
@@ -82,7 +84,7 @@ namespace SmartCar
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Joystick] Initialization error: {ex.Message}");
+                Logger.Error(ex, "Initialization error");
                 return false;
             }
         }
@@ -91,20 +93,20 @@ namespace SmartCar
         {
             if (_joystick == null)
             {
-                Console.WriteLine("[Joystick] ERROR: Joystick not initialized");
+                Logger.Error("Joystick not initialized");
                 return;
             }
 
             if (_isRunning)
             {
-                Console.WriteLine("[Joystick] Already running");
+                Logger.Debug("Already running");
                 return;
             }
 
             _isRunning = true;
             _cancellationSource = new CancellationTokenSource();
             _pollTask = Task.Run(() => PollLoopAsync(_cancellationSource.Token));
-            Console.WriteLine("[Joystick] Started polling");
+            Logger.Info("Started polling");
         }
 
         public void Stop()
@@ -114,7 +116,7 @@ namespace SmartCar
             _isRunning = false;
             _cancellationSource?.Cancel();
             _pollTask?.Wait(1000);
-            Console.WriteLine("[Joystick] Stopped polling");
+            Logger.Info("Stopped polling");
         }
 
         private async Task PollLoopAsync(CancellationToken token)
@@ -187,7 +189,7 @@ namespace SmartCar
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[Joystick] Poll error: {ex.Message}");
+                    Logger.Error(ex, "Poll error");
                     await Task.Delay(1000, token);
                 }
             }

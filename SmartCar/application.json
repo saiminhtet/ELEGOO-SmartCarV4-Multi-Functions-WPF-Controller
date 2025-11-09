@@ -1,0 +1,36 @@
+{
+  "Robot": {
+    "IpAddress": "192.168.4.1",
+    "Port": 100,
+    "ConnectionTimeoutMs": 5000
+  },
+  "Controls": {
+    "Keyboard": {
+      "ForwardSpeed": 100,
+      "BackwardSpeed": 100,
+      "TurnSpeed": 100
+    },
+    "Joystick": {
+      "Deadzone": 5000,
+      "MaxAxisValue": 65535,
+      "MaxSpeed": 200,
+      "CommandThrottleMs": 100,
+      "PositionChangeDelta": 3
+    },
+    "RacingWheel": {
+      "SteeringDeadzone": 2000,
+      "PedalDeadzone": 1000,
+      "MaxAxisValue": 65535,
+      "ThrottleMaxSpeed": 200,
+      "BrakeMaxSpeed": 150,
+      "BrakeThreshold": 15,
+      "SteeringFactor": 0.65,
+      "CommandThrottleMs": 80,
+      "InputChangeDelta": 5
+    }
+  },
+  "Video": {
+    "Enabled": false,
+    "StatusUpdateIntervalSeconds": 2
+  }
+}

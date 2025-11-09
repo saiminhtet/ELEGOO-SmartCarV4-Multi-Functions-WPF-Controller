@@ -3,13 +3,14 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using OpenCvSharp;
+using NLog;
 
 namespace SmartCarExample
 {
     public partial class MainWindow : System.Windows.Window
     {
-        private readonly string Robot_IP = "192.168.4.1";
-        private readonly int Robot_Port = 100;
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+        private readonly SmartCar.AppConfiguration config;
         private SmartCar.ConnectionManager? connectionManager;
         private SmartCar.VideoStreamViewer? videoViewer;
         private SmartCar.VideoViewerWindow? videoWindow;
@@ -22,69 +23,106 @@ namespace SmartCarExample
         private int lastJoystickX = 0;
         private int lastJoystickY = 0;
         private DateTime lastJoystickCommandTime = DateTime.MinValue;
+        private SmartCar.RacingWheelController? racingWheelController;
+        private bool racingWheelEnabled = false;
+        private int lastWheelSteering = 0;
+        private int lastWheelThrottle = 0;
+        private DateTime lastWheelCommandTime = DateTime.MinValue;
 
         public MainWindow()
         {
             InitializeComponent();
+
+            // Load configuration
+            config = SmartCar.AppConfiguration.Load();
+
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            Console.WriteLine("=== MainWindow Loading ===");
+            Logger.Info("=== MainWindow Loading ===");
 
             // Focus window for keyboard input
             this.Focus();
             this.Activate();
-            Console.WriteLine($"Window focused: {this.IsFocused}, Activated: {this.IsActive}");
+            Logger.Debug($"Window focused: {this.IsFocused}, Activated: {this.IsActive}");
 
             // Initialize connection manager
-            Console.WriteLine($"Initializing connection to {Robot_IP}:{Robot_Port}");
-            connectionManager = new SmartCar.ConnectionManager(Robot_IP, Robot_Port);
+            Logger.Info($"Initializing connection to {config.Robot.IpAddress}:{config.Robot.Port}");
+            connectionManager = new SmartCar.ConnectionManager(config.Robot.IpAddress, config.Robot.Port);
             connectionManager.MessageReceived += OnMessageReceived;
             connectionManager.ConnectionStatusChanged += OnConnectionStatusChanged;
 
             // Initialize video viewer
-            Console.WriteLine("Initializing video viewer");
-            videoViewer = new SmartCar.VideoStreamViewer(Robot_IP);
+            Logger.Info("Initializing video viewer");
+            videoViewer = new SmartCar.VideoStreamViewer(config.Robot.IpAddress);
             videoViewer.FrameReceived += OnFrameReceived;
             videoViewer.FrameDropped += OnFrameDropped;
 
-            // Initialize joystick controller
-            Console.WriteLine("Initializing joystick controller");
+            // Initialize racing wheel controller (try first for G27)
+            Logger.Info("Initializing racing wheel controller");
+            racingWheelController = new SmartCar.RacingWheelController();
+            if (racingWheelController.Initialize())
+            {
+                racingWheelController.InputChanged += OnRacingWheelInput;
+                racingWheelController.ButtonPressed += OnRacingWheelButtonPressed;
+                racingWheelController.ButtonReleased += OnRacingWheelButtonReleased;
+                Logger.Info($"✓ Racing wheel ready: {racingWheelController.DeviceName}");
+                Logger.Info("Press 'R' to enable racing wheel control");
+                UpdateRacingWheelDisplay();
+            }
+            else
+            {
+                Logger.Info("✗ No racing wheel detected");
+                racingWheelController = null;
+            }
+
+            // Initialize joystick controller (always try, even if racing wheel found)
+            Logger.Info("Initializing joystick controller");
             joystickController = new SmartCar.JoystickController();
             if (joystickController.Initialize())
             {
                 joystickController.MovementChanged += OnJoystickMovement;
                 joystickController.ButtonPressed += OnJoystickButtonPressed;
                 joystickController.ButtonReleased += OnJoystickButtonReleased;
-                Console.WriteLine($"✓ Joystick ready: {joystickController.DeviceName}");
-                Console.WriteLine("Press 'J' to enable joystick control");
-                UpdateJoystickDisplay();
+                Logger.Info($"✓ Joystick ready: {joystickController.DeviceName}");
+                Logger.Info("Press 'J' to enable joystick control");
+
+                // Only update display if racing wheel wasn't found
+                if (racingWheelController == null)
+                {
+                    UpdateJoystickDisplay();
+                }
             }
             else
             {
-                Console.WriteLine("✗ No joystick detected - keyboard control only");
+                Logger.Info("✗ No joystick detected");
                 joystickController = null;
-                UpdateJoystickDisplay();
+
+                // Update display to show no controller if neither found
+                if (racingWheelController == null)
+                {
+                    UpdateJoystickDisplay();
+                }
             }
 
             // Connect to smart car
             UpdateStatus("Connecting to Smart Car...");
-            Console.WriteLine("Attempting to connect...");
+            Logger.Info("Attempting to connect...");
             bool connected = await connectionManager.ConnectAsync();
 
             if (!connected)
             {
-                Console.WriteLine("ERROR: Failed to connect");
+                Logger.Error("Failed to connect");
                 UpdateStatus("Failed to connect to Smart Car");
-                MessageBox.Show($"Failed to connect to Smart Car at {Robot_IP}:{Robot_Port}\n\nMake sure:\n1. Car is powered on\n2. You're connected to car's WiFi\n3. IP address is correct",
+                MessageBox.Show($"Failed to connect to Smart Car at {config.Robot.IpAddress}:{config.Robot.Port}\n\nMake sure:\n1. Car is powered on\n2. You're connected to car's WiFi\n3. IP address is correct",
                     "Connection Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             else
             {
-                Console.WriteLine("SUCCESS: Connected to car");
+                Logger.Info("SUCCESS: Connected to car");
                 UpdateStatus("Connected - Press WASD to drive!");
                 UpdateModeDisplay(0); // Car starts in Mode 0 (Manual)
             }
@@ -125,25 +163,25 @@ namespace SmartCarExample
             {
                 case Key.W:
                     lastDirection = 3;
-                    command = SmartCar.SmartCarCommands.CarControl(3, 100); // Forward - continuous
+                    command = SmartCar.SmartCarCommands.CarControl(3, config.Controls.Keyboard.ForwardSpeed);
                     action = "Moving Forward";
                     videoWindow?.UpdateCarStatus("Driving Forward");
                     break;
                 case Key.S:
                     lastDirection = 4;
-                    command = SmartCar.SmartCarCommands.CarControl(4, 100); // Backward - continuous
+                    command = SmartCar.SmartCarCommands.CarControl(4, config.Controls.Keyboard.BackwardSpeed);
                     action = "Moving Backward";
                     videoWindow?.UpdateCarStatus("Reversing");
                     break;
                 case Key.A:
                     lastDirection = 1;
-                    command = SmartCar.SmartCarCommands.CarControl(1, 100); // Left - continuous
+                    command = SmartCar.SmartCarCommands.CarControl(1, config.Controls.Keyboard.TurnSpeed);
                     action = "Turning Left";
                     videoWindow?.UpdateCarStatus("Turning Left");
                     break;
                 case Key.D:
                     lastDirection = 2;
-                    command = SmartCar.SmartCarCommands.CarControl(2, 100); // Right - continuous
+                    command = SmartCar.SmartCarCommands.CarControl(2, config.Controls.Keyboard.TurnSpeed);
                     action = "Turning Right";
                     videoWindow?.UpdateCarStatus("Turning Right");
                     break;
@@ -157,6 +195,9 @@ namespace SmartCarExample
                     break;
                 case Key.J:
                     ToggleJoystickMode();
+                    return;
+                case Key.R:
+                    ToggleRacingWheelMode();
                     return;
                 case Key.V:
                     ToggleVideoStream();
@@ -267,7 +308,7 @@ namespace SmartCarExample
                 // Start WiFi signal monitoring timer
                 statusUpdateTimer = new System.Windows.Threading.DispatcherTimer
                 {
-                    Interval = TimeSpan.FromSeconds(2)
+                    Interval = TimeSpan.FromSeconds(config.Video.StatusUpdateIntervalSeconds)
                 };
                 statusUpdateTimer.Tick += (s, ev) =>
                 {
@@ -467,7 +508,7 @@ namespace SmartCarExample
                 joystickController.Start();
                 UpdateStatus($"Joystick Enabled: {joystickController.DeviceName}");
                 UpdateJoystickDisplay();
-                Console.WriteLine($"[Joystick] Enabled - {joystickController.DeviceName}");
+                Logger.Info($"Enabled - {joystickController.DeviceName}");
             }
             else
             {
@@ -481,7 +522,7 @@ namespace SmartCarExample
                 }
                 UpdateStatus("Joystick Disabled - Keyboard Control");
                 UpdateJoystickDisplay();
-                Console.WriteLine("[Joystick] Disabled");
+                Logger.Info("Disabled");
             }
         }
 
@@ -500,7 +541,9 @@ namespace SmartCarExample
             var timeSinceLastCommand = (DateTime.Now - lastJoystickCommandTime).TotalMilliseconds;
 
             // Skip if position hasn't changed much and we recently sent a command
-            if (deltaX < 3 && deltaY < 3 && timeSinceLastCommand < 100)
+            if (deltaX < config.Controls.Joystick.PositionChangeDelta &&
+                deltaY < config.Controls.Joystick.PositionChangeDelta &&
+                timeSinceLastCommand < config.Controls.Joystick.CommandThrottleMs)
             {
                 return; // No significant change, don't spam commands
             }
@@ -522,7 +565,7 @@ namespace SmartCarExample
 
             // Determine primary direction and speed
             int speed = (int)Math.Min(Math.Sqrt(x * x + y * y), 100);
-            int mappedSpeed = (int)((speed / 100.0) * 200); // Map 0-100 to 0-200
+            int mappedSpeed = (int)((speed / 100.0) * config.Controls.Joystick.MaxSpeed); // Map 0-100 to configured max
 
             // Determine direction based on dominant axis
             int direction;
@@ -565,7 +608,7 @@ namespace SmartCarExample
 
         private void OnJoystickButtonPressed(object? sender, SmartCar.JoystickButtonEventArgs e)
         {
-            Console.WriteLine($"[Joystick] Button {e.ButtonIndex} pressed");
+            Logger.Debug($"Button {e.ButtonIndex} pressed");
 
             // Button mapping for Thrustmaster TCA Sidestick
             switch (e.ButtonIndex)
@@ -608,11 +651,264 @@ namespace SmartCarExample
             // Handle button release if needed
         }
 
+        private void UpdateRacingWheelDisplay()
+        {
+            Dispatcher.InvokeAsync(() =>
+            {
+                if (racingWheelController == null)
+                {
+                    JoystickStatusText.Text = "Not Connected";
+                    JoystickStatusText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(170, 170, 170)); // Gray
+                    JoystickDeviceText.Text = "";
+                }
+                else if (racingWheelEnabled)
+                {
+                    JoystickStatusText.Text = "Racing Wheel";
+                    JoystickStatusText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(78, 201, 176)); // Green
+                    JoystickDeviceText.Text = $"({racingWheelController.DeviceName})";
+                }
+                else
+                {
+                    JoystickStatusText.Text = "Wheel Standby";
+                    JoystickStatusText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(170, 170, 170)); // Gray
+                    JoystickDeviceText.Text = $"({racingWheelController.DeviceName})";
+                }
+            });
+        }
+
+        private void ToggleRacingWheelMode()
+        {
+            if (racingWheelController == null)
+            {
+                UpdateStatus("No racing wheel detected");
+                MessageBox.Show("No racing wheel detected!\n\nPlease connect your Logitech G27 racing wheel and restart the application.",
+                    "Racing Wheel Not Found", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Disable joystick if it was enabled
+            if (joystickEnabled && joystickController != null)
+            {
+                joystickController.Stop();
+                joystickEnabled = false;
+                UpdateJoystickDisplay();
+            }
+
+            racingWheelEnabled = !racingWheelEnabled;
+
+            if (racingWheelEnabled)
+            {
+                racingWheelController.Start();
+                UpdateStatus($"Racing Wheel Enabled: {racingWheelController.DeviceName}");
+                UpdateRacingWheelDisplay();
+                Logger.Info($"Enabled - {racingWheelController.DeviceName}");
+            }
+            else
+            {
+                racingWheelController.Stop();
+                // Send stop command when disabling
+                if (connectionManager != null && connectionManager.IsConnected)
+                {
+                    connectionManager.SendCommand(SmartCar.SmartCarCommands.CarControl(3, 0));
+                    connectionManager.SendCommand(SmartCar.SmartCarCommands.CarStop());
+                    connectionManager.SendCommand(SmartCar.SmartCarCommands.JoystickClear());
+                }
+                UpdateStatus("Racing Wheel Disabled - Keyboard Control");
+                UpdateRacingWheelDisplay();
+                Logger.Info("Disabled");
+            }
+        }
+
+        private void OnRacingWheelInput(object? sender, SmartCar.RacingWheelInputEventArgs e)
+        {
+            if (!racingWheelEnabled || connectionManager == null || !connectionManager.IsConnected)
+                return;
+
+            int steering = -e.Steering;  // INVERTED: -100 (left) to +100 (right)
+            int throttle = e.Throttle;   // 0 to 100
+            int brake = e.Brake;         // 0 to 100
+
+            // Debug: Log all inputs to diagnose steering
+            if (throttle > 5 || brake > 5 || Math.Abs(steering) > 10)
+            {
+                Logger.Debug($"Wheel Input - Steering:{steering} Throttle:{throttle} Brake:{brake}");
+            }
+
+            // Throttling to prevent command spam
+            int deltaSteering = Math.Abs(steering - lastWheelSteering);
+            int deltaThrottle = Math.Abs(throttle - lastWheelThrottle);
+            var timeSinceLastCommand = (DateTime.Now - lastWheelCommandTime).TotalMilliseconds;
+
+            if (deltaSteering < config.Controls.RacingWheel.InputChangeDelta &&
+                deltaThrottle < config.Controls.RacingWheel.InputChangeDelta &&
+                timeSinceLastCommand < config.Controls.RacingWheel.CommandThrottleMs)
+            {
+                return; // No significant change
+            }
+
+            lastWheelSteering = steering;
+            lastWheelThrottle = throttle;
+            lastWheelCommandTime = DateTime.Now;
+
+            // Calculate motor speeds with differential steering
+            // Throttle pedal (right) = FORWARD only
+            // Brake pedal (middle) = REVERSE only
+            int baseSpeed = 0;
+            bool isReverse = false;
+            const int MIN_MOTOR_SPEED = 40; // Minimum speed to prevent buzzing
+
+            if (throttle > 5) // Throttle/Gas pedal (right) = Forward
+            {
+                baseSpeed = (int)((throttle / 100.0) * config.Controls.RacingWheel.ThrottleMaxSpeed);
+                isReverse = false;
+            }
+            else if (brake > config.Controls.RacingWheel.BrakeThreshold) // Brake pedal (middle) = Reverse
+            {
+                baseSpeed = (int)((brake / 100.0) * config.Controls.RacingWheel.BrakeMaxSpeed);
+                isReverse = true;
+            }
+
+            // Apply differential steering for forward motion
+            // steering: -100 = full left, 0 = straight, +100 = full right
+            int leftSpeed = baseSpeed;
+            int rightSpeed = baseSpeed;
+
+            if (!isReverse && Math.Abs(steering) > 5 && baseSpeed > 0) // Apply steering when moving forward
+            {
+                float steeringFactor = steering / 100.0f; // -1.0 to +1.0
+
+                if (steeringFactor > 0) // Turning right
+                {
+                    // Reduce right motor speed
+                    int reducedSpeed = (int)(baseSpeed * (1.0f - Math.Abs(steeringFactor) * config.Controls.RacingWheel.SteeringFactor));
+
+                    // Prevent motor buzzing - if speed too low, stop that motor
+                    if (reducedSpeed < MIN_MOTOR_SPEED)
+                    {
+                        rightSpeed = 0; // Stop right motor for sharp turn
+                        Logger.Debug($"Sharp RIGHT - L:{leftSpeed} R:0 (stopped to prevent buzz)");
+                    }
+                    else
+                    {
+                        rightSpeed = reducedSpeed;
+                        Logger.Debug($"RIGHT - L:{leftSpeed} R:{rightSpeed}");
+                    }
+                }
+                else // Turning left
+                {
+                    // Reduce left motor speed
+                    int reducedSpeed = (int)(baseSpeed * (1.0f - Math.Abs(steeringFactor) * config.Controls.RacingWheel.SteeringFactor));
+
+                    // Prevent motor buzzing - if speed too low, stop that motor
+                    if (reducedSpeed < MIN_MOTOR_SPEED)
+                    {
+                        leftSpeed = 0; // Stop left motor for sharp turn
+                        Logger.Debug($"Sharp LEFT - L:0 (stopped to prevent buzz) R:{rightSpeed}");
+                    }
+                    else
+                    {
+                        leftSpeed = reducedSpeed;
+                        Logger.Debug($"LEFT - L:{leftSpeed} R:{rightSpeed}");
+                    }
+                }
+            }
+
+            // Clamp speeds
+            leftSpeed = Math.Clamp(leftSpeed, 0, 255);
+            rightSpeed = Math.Clamp(rightSpeed, 0, 255);
+
+            // Send motor control commands
+            if (baseSpeed < 5) // Stopped
+            {
+                connectionManager.SendCommand(SmartCar.SmartCarCommands.CarControl(3, 0));
+                connectionManager.SendCommand(SmartCar.SmartCarCommands.CarStop());
+                connectionManager.SendCommand(SmartCar.SmartCarCommands.JoystickClear());
+                videoWindow?.UpdateCarStatus("Ready");
+            }
+            else if (isReverse)
+            {
+                // REVERSE: Use CarControl with direction=4 (backward)
+                // Note: Differential steering not supported in reverse for simplicity
+                string command = SmartCar.SmartCarCommands.CarControl(4, baseSpeed);
+                connectionManager.SendCommand(command);
+
+                string status = $"Reverse ({brake}%)";
+                videoWindow?.UpdateCarStatus(status);
+            }
+            else
+            {
+                // FORWARD: Use MotorControlSpeed for differential steering
+                string command = SmartCar.SmartCarCommands.MotorControlSpeed(leftSpeed, rightSpeed);
+                connectionManager.SendCommand(command);
+
+                string steeringInfo = Math.Abs(steering) > 10 ?
+                    (steering > 0 ? " Right" : " Left") : "";
+                string status = $"Forward{steeringInfo} ({throttle}%)";
+                videoWindow?.UpdateCarStatus(status);
+            }
+        }
+
+        private void OnRacingWheelButtonPressed(object? sender, SmartCar.RacingWheelButtonEventArgs e)
+        {
+            Logger.Debug($"Button {e.ButtonIndex} pressed");
+
+            // Button mapping for Logitech G27
+            switch (e.ButtonIndex)
+            {
+                case 0: // Button 1 on wheel - Toggle video
+                    Dispatcher.InvokeAsync(() => ToggleVideoStream());
+                    break;
+                case 1: // Button 2 - Mode 0 (Manual)
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                        connectionManager?.SwitchMode(0);
+                        UpdateStatus("Mode 0: Manual");
+                        UpdateModeDisplay(0);
+                        videoWindow?.UpdateMode(0);
+                    });
+                    break;
+                case 2: // Button 3 - Mode 1 (Line Detection)
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                        connectionManager?.SwitchMode(1);
+                        UpdateStatus("Mode 1: Line Detection");
+                        UpdateModeDisplay(1);
+                        videoWindow?.UpdateMode(1);
+                    });
+                    break;
+                case 3: // Button 4 - Mode 2 (Obstacle Avoidance)
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                        connectionManager?.SwitchMode(2);
+                        UpdateStatus("Mode 2: Obstacle Detection");
+                        UpdateModeDisplay(2);
+                        videoWindow?.UpdateMode(2);
+                    });
+                    break;
+                case 4: // Button 5 - Mode 3 (Follow)
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                        connectionManager?.SwitchMode(3);
+                        UpdateStatus("Mode 3: Follow Mode");
+                        UpdateModeDisplay(3);
+                        videoWindow?.UpdateMode(3);
+                    });
+                    break;
+            }
+        }
+
+        private void OnRacingWheelButtonReleased(object? sender, SmartCar.RacingWheelButtonEventArgs e)
+        {
+            // Handle button release if needed
+        }
+
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
             // Cleanup
             joystickController?.Stop();
             joystickController?.Dispose();
+            racingWheelController?.Stop();
+            racingWheelController?.Dispose();
             videoViewer?.Stop();
             videoViewer?.Dispose();
             videoWindow?.Close();

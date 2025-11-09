@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="ELEGOO Smart Car V4 Controller"
-        Height="400" Width="600"
+        Height="650" Width="850"
         WindowStartupLocation="CenterScreen"
         Background="#1E1E1E"
         KeyDown="Window_KeyDown"
@@ -26,65 +26,235 @@
                    HorizontalAlignment="Center"
                    Margin="0,0,0,20"/>
 
-        <!-- Controls Info -->
+        <!-- Instruction Manual -->
         <Border Grid.Row="1"
                 BorderBrush="#333"
                 BorderThickness="1"
                 CornerRadius="5"
                 Background="#252526"
-                Padding="20">
-            <StackPanel>
-                <TextBlock Text="Keyboard Controls:"
-                           FontSize="18"
-                           FontWeight="Bold"
-                           Foreground="#DCDCAA"
-                           Margin="0,0,0,15"/>
+                Padding="0">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+                <StackPanel>
+                    <!-- Quick Start -->
+                    <TextBlock Text="📖 Quick Start Guide"
+                               FontSize="20"
+                               FontWeight="Bold"
+                               Foreground="#4EC9B0"
+                               Margin="0,0,0,10"/>
+                    <TextBlock TextWrapping="Wrap" Foreground="#D4D4D4" Margin="0,0,0,15" LineHeight="20">
+                        <Run Text="1. Ensure your Smart Car is powered on and WiFi is active&#x0a;"/>
+                        <Run Text="2. Connect your computer to the car's WiFi network&#x0a;"/>
+                        <Run Text="3. The app will auto-connect to " Foreground="#AAA"/>
+                        <Run Text="192.168.4.1:100" FontWeight="Bold" Foreground="#569CD6"/>
+                        <Run Text="&#x0a;" Foreground="#AAA"/>
+                        <Run Text="4. Use keyboard, joystick, or racing wheel to control the car" Foreground="#AAA"/>
+                    </TextBlock>
 
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
+                    <Separator Background="#444" Margin="0,0,0,15"/>
 
-                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                        <TextBlock Margin="0,5">
-                            <Run Text="W" FontWeight="Bold" Foreground="#569CD6"/>
-                            <Run Text=" - Forward" Foreground="#D4D4D4"/>
-                        </TextBlock>
-                        <TextBlock Margin="0,5">
-                            <Run Text="S" FontWeight="Bold" Foreground="#569CD6"/>
-                            <Run Text=" - Backward" Foreground="#D4D4D4"/>
-                        </TextBlock>
-                        <TextBlock Margin="0,5">
-                            <Run Text="A" FontWeight="Bold" Foreground="#569CD6"/>
-                            <Run Text=" - Turn Left" Foreground="#D4D4D4"/>
-                        </TextBlock>
-                        <TextBlock Margin="0,5">
-                            <Run Text="D" FontWeight="Bold" Foreground="#569CD6"/>
-                            <Run Text=" - Turn Right" Foreground="#D4D4D4"/>
-                        </TextBlock>
-                    </StackPanel>
+                    <!-- Keyboard Controls -->
+                    <TextBlock Text="⌨️ Keyboard Controls"
+                               FontSize="18"
+                               FontWeight="Bold"
+                               Foreground="#DCDCAA"
+                               Margin="0,0,0,10"/>
 
-                    <StackPanel Grid.Column="1">
-                        <TextBlock Margin="0,5">
-                            <Run Text="[" FontWeight="Bold" Foreground="#569CD6"/>
-                            <Run Text=" - Camera Left" Foreground="#D4D4D4"/>
+                    <Grid Margin="0,0,0,15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Driving -->
+                        <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                            <TextBlock Text="Driving:" FontWeight="Bold" Foreground="#CE9178" Margin="0,0,0,5"/>
+                            <TextBlock Margin="0,3">
+                                <Run Text="W" FontWeight="Bold" Foreground="#569CD6"/>
+                                <Run Text=" - Forward" Foreground="#D4D4D4"/>
+                            </TextBlock>
+                            <TextBlock Margin="0,3">
+                                <Run Text="S" FontWeight="Bold" Foreground="#569CD6"/>
+                                <Run Text=" - Backward" Foreground="#D4D4D4"/>
+                            </TextBlock>
+                            <TextBlock Margin="0,3">
+                                <Run Text="A" FontWeight="Bold" Foreground="#569CD6"/>
+                                <Run Text=" - Turn Left" Foreground="#D4D4D4"/>
+                            </TextBlock>
+                            <TextBlock Margin="0,3">
+                                <Run Text="D" FontWeight="Bold" Foreground="#569CD6"/>
+                                <Run Text=" - Turn Right" Foreground="#D4D4D4"/>
+                            </TextBlock>
+                        </StackPanel>
+
+                        <!-- Camera & Controls -->
+                        <StackPanel Grid.Column="1" Margin="0,0,15,0">
+                            <TextBlock Text="Camera:" FontWeight="Bold" Foreground="#CE9178" Margin="0,0,0,5"/>
+                            <TextBlock Margin="0,3">
+                                <Run Text="[" FontWeight="Bold" Foreground="#569CD6"/>
+                                <Run Text=" - Rotate Left" Foreground="#D4D4D4"/>
+                            </TextBlock>
+                            <TextBlock Margin="0,3">
+                                <Run Text="]" FontWeight="Bold" Foreground="#569CD6"/>
+                                <Run Text=" - Rotate Right" Foreground="#D4D4D4"/>
+                            </TextBlock>
+                            <TextBlock Margin="0,3">
+                                <Run Text="V" FontWeight="Bold" Foreground="#569CD6"/>
+                                <Run Text=" - Toggle Video" Foreground="#D4D4D4"/>
+                            </TextBlock>
+                        </StackPanel>
+
+                        <!-- Modes & Other -->
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Modes:" FontWeight="Bold" Foreground="#CE9178" Margin="0,0,0,5"/>
+                            <TextBlock Margin="0,3">
+                                <Run Text="0-3" FontWeight="Bold" Foreground="#569CD6"/>
+                                <Run Text=" - Switch Mode" Foreground="#D4D4D4"/>
+                            </TextBlock>
+                            <TextBlock Margin="0,3">
+                                <Run Text="J" FontWeight="Bold" Foreground="#569CD6"/>
+                                <Run Text=" - Toggle Joystick" Foreground="#D4D4D4"/>
+                            </TextBlock>
+                            <TextBlock Margin="0,3">
+                                <Run Text="R" FontWeight="Bold" Foreground="#569CD6"/>
+                                <Run Text=" - Toggle Wheel" Foreground="#D4D4D4"/>
+                            </TextBlock>
+                            <TextBlock Margin="0,3">
+                                <Run Text="Esc" FontWeight="Bold" Foreground="#569CD6"/>
+                                <Run Text=" - Exit App" Foreground="#D4D4D4"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </Grid>
+
+                    <Separator Background="#444" Margin="0,0,0,15"/>
+
+                    <!-- Racing Wheel Controls -->
+                    <TextBlock Text="🏎️ Racing Wheel Controls (Logitech G27/G29/G920)"
+                               FontSize="18"
+                               FontWeight="Bold"
+                               Foreground="#DCDCAA"
+                               Margin="0,0,0,10"/>
+
+                    <Grid Margin="0,0,0,15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                            <TextBlock Margin="0,3">
+                                <Run Text="🎯 Steering Wheel" FontWeight="Bold" Foreground="#CE9178"/>
+                                <Run Text=" - Differential steering (smooth turns)" Foreground="#D4D4D4"/>
+                            </TextBlock>
+                            <TextBlock Margin="0,3">
+                                <Run Text="🚀 Throttle Pedal" FontWeight="Bold" Foreground="#CE9178"/>
+                                <Run Text=" - Accelerate forward (0-100%)" Foreground="#D4D4D4"/>
+                            </TextBlock>
+                            <TextBlock Margin="0,3">
+                                <Run Text="🛑 Brake Pedal" FontWeight="Bold" Foreground="#CE9178"/>
+                                <Run Text=" - Slow down / Reverse when held" Foreground="#D4D4D4"/>
+                            </TextBlock>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="Wheel Buttons:" FontWeight="Bold" Foreground="#CE9178" Margin="0,0,0,5"/>
+                            <TextBlock Margin="0,2" FontSize="11" Foreground="#D4D4D4">
+                                <Run Text="Btn 1: " FontWeight="Bold" Foreground="#569CD6"/>
+                                <Run Text="Video"/>
+                            </TextBlock>
+                            <TextBlock Margin="0,2" FontSize="11" Foreground="#D4D4D4">
+                                <Run Text="Btn 2: " FontWeight="Bold" Foreground="#569CD6"/>
+                                <Run Text="Mode 0"/>
+                            </TextBlock>
+                            <TextBlock Margin="0,2" FontSize="11" Foreground="#D4D4D4">
+                                <Run Text="Btn 3: " FontWeight="Bold" Foreground="#569CD6"/>
+                                <Run Text="Mode 1"/>
+                            </TextBlock>
+                            <TextBlock Margin="0,2" FontSize="11" Foreground="#D4D4D4">
+                                <Run Text="Btn 4: " FontWeight="Bold" Foreground="#569CD6"/>
+                                <Run Text="Mode 2"/>
+                            </TextBlock>
+                            <TextBlock Margin="0,2" FontSize="11" Foreground="#D4D4D4">
+                                <Run Text="Btn 5: " FontWeight="Bold" Foreground="#569CD6"/>
+                                <Run Text="Mode 3"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </Grid>
+
+                    <Separator Background="#444" Margin="0,0,0,15"/>
+
+                    <!-- Operating Modes -->
+                    <TextBlock Text="🤖 Operating Modes"
+                               FontSize="18"
+                               FontWeight="Bold"
+                               Foreground="#DCDCAA"
+                               Margin="0,0,0,10"/>
+
+                    <Grid Margin="0,0,0,15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                            <TextBlock Margin="0,5">
+                                <Run Text="Mode 0 - Manual Control" FontWeight="Bold" Foreground="#4EC9B0"/>
+                                <LineBreak/>
+                                <Run Text="Full manual control via keyboard, joystick, or racing wheel" FontSize="11" Foreground="#AAA"/>
+                            </TextBlock>
+                            <TextBlock Margin="0,10">
+                                <Run Text="Mode 1 - Line Following" FontWeight="Bold" Foreground="#FFC107"/>
+                                <LineBreak/>
+                                <Run Text="Autonomous line tracking using infrared sensors" FontSize="11" Foreground="#AAA"/>
+                            </TextBlock>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Margin="0,5">
+                                <Run Text="Mode 2 - Obstacle Avoidance" FontWeight="Bold" Foreground="#FFC107"/>
+                                <LineBreak/>
+                                <Run Text="Autonomous navigation avoiding obstacles with ultrasonic sensor" FontSize="11" Foreground="#AAA"/>
+                            </TextBlock>
+                            <TextBlock Margin="0,10">
+                                <Run Text="Mode 3 - Object Following" FontWeight="Bold" Foreground="#FFC107"/>
+                                <LineBreak/>
+                                <Run Text="Autonomous object tracking and following" FontSize="11" Foreground="#AAA"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </Grid>
+
+                    <Separator Background="#444" Margin="0,0,0,15"/>
+
+                    <!-- Tips -->
+                    <TextBlock Text="💡 Tips &amp; Notes"
+                               FontSize="18"
+                               FontWeight="Bold"
+                               Foreground="#DCDCAA"
+                               Margin="0,0,0,10"/>
+
+                    <StackPanel Margin="0,0,0,5">
+                        <TextBlock Margin="0,3" Foreground="#D4D4D4" TextWrapping="Wrap">
+                            <Run Text="• " Foreground="#4EC9B0"/>
+                            <Run Text="Press " Foreground="#AAA"/>
+                            <Run Text="R" FontWeight="Bold" Foreground="#569CD6"/>
+                            <Run Text=" to enable racing wheel mode for realistic car-like steering" Foreground="#AAA"/>
                         </TextBlock>
-                        <TextBlock Margin="0,5">
-                            <Run Text="]" FontWeight="Bold" Foreground="#569CD6"/>
-                            <Run Text=" - Camera Right" Foreground="#D4D4D4"/>
+                        <TextBlock Margin="0,3" Foreground="#D4D4D4" TextWrapping="Wrap">
+                            <Run Text="• " Foreground="#4EC9B0"/>
+                            <Run Text="Racing wheel uses differential steering - turning reduces inside wheel speed" Foreground="#AAA"/>
                         </TextBlock>
-                        <TextBlock Margin="0,5">
+                        <TextBlock Margin="0,3" Foreground="#D4D4D4" TextWrapping="Wrap">
+                            <Run Text="• " Foreground="#4EC9B0"/>
+                            <Run Text="Video streaming shows real-time camera feed - toggle with " Foreground="#AAA"/>
                             <Run Text="V" FontWeight="Bold" Foreground="#569CD6"/>
-                            <Run Text=" - Toggle Video" Foreground="#D4D4D4"/>
                         </TextBlock>
-                        <TextBlock Margin="0,5">
-                            <Run Text="Esc" FontWeight="Bold" Foreground="#569CD6"/>
-                            <Run Text=" - Quit" Foreground="#D4D4D4"/>
+                        <TextBlock Margin="0,3" Foreground="#D4D4D4" TextWrapping="Wrap">
+                            <Run Text="• " Foreground="#4EC9B0"/>
+                            <Run Text="Only one control method (keyboard/joystick/wheel) is active at a time" Foreground="#AAA"/>
                         </TextBlock>
                     </StackPanel>
-                </Grid>
-            </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
         </Border>
 
         <!-- Connection Status -->

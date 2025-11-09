@@ -6,6 +6,8 @@ A modern Windows desktop application for controlling the ELEGOO Smart Car V4 wit
 
 ### 🎮 Full Car Control
 - **WASD keyboard controls** for driving
+- **Logitech G27 racing wheel support** with differential steering
+- **Joystick/gamepad support** (Thrustmaster TCA, Xbox controllers, etc.)
 - **Camera rotation** with bracket keys
 - **Real-time commands** via TCP socket
 - **Stable connection** with heartbeat echo
@@ -23,6 +25,7 @@ A modern Windows desktop application for controlling the ELEGOO Smart Car V4 wit
 - **Video status** display
 - **Keyboard shortcuts** guide
 - **Status bar** with real-time feedback
+- **NLog logging** with file rotation and console output
 
 ## Requirements
 
@@ -69,6 +72,7 @@ Or double-click the compiled `.exe` in `bin\Debug\net6.0-windows\`
 | **2** | Switch to Mode 2 (Obstacle Detection) |
 | **3** | Switch to Mode 3 (Follow Mode) |
 | **J** | Toggle Joystick Control Mode |
+| **R** | Toggle Racing Wheel Control Mode |
 | **V** | Toggle Live Video Stream |
 | **Esc** | Exit Application |
 
@@ -104,6 +108,47 @@ The application supports flight stick/joystick control for a more immersive driv
 - ✅ **Works alongside keyboard** - Can switch between joystick and keyboard anytime
 
 Press **J** again to disable joystick and return to keyboard control.
+
+### Racing Wheel Control (Logitech G27/G29/G920)
+
+Full racing wheel support with realistic car-like controls!
+
+**Setup:**
+1. Connect your Logitech Racing Wheel (G27, G29, or G920)
+2. Launch the application - wheel will be detected automatically
+3. Press **R** to enable racing wheel control mode
+
+**Racing Wheel Controls:**
+- **Steering Wheel**: Turn left/right with differential motor control
+- **Throttle Pedal (Right)**: Drive forward with variable speed
+- **Brake Pedal (Middle)**: Reverse with variable speed
+- **No buzzing**: Smart motor control prevents low-speed buzzing
+- **Smooth steering**: Differential steering just like a real car
+
+**Pedal Mapping:**
+| Pedal | Function |
+|-------|----------|
+| **Throttle (Right)** | Forward (0-100% speed) |
+| **Brake (Middle)** | Reverse (0-100% speed) |
+| **Clutch (Left)** | Not used |
+
+**Button Mapping:**
+| Button | Action |
+|--------|--------|
+| **Button 1** | Toggle video stream |
+| **Button 2** | Mode 0 (Manual) |
+| **Button 3** | Mode 1 (Line Detection) |
+| **Button 4** | Mode 2 (Obstacle Detection) |
+| **Button 5** | Mode 3 (Follow Mode) |
+
+**Features:**
+- ✅ **Realistic steering** - Differential motor speeds (one wheel slows for turns)
+- ✅ **Analog pedals** - Smooth acceleration/deceleration
+- ✅ **No motor buzzing** - Motors stop completely at low speeds
+- ✅ **Independent from joystick** - Can have both connected
+- ✅ **Auto-stop** - Car stops when pedals are released
+
+Press **R** again to disable racing wheel and return to keyboard control.
 
 ### Sensor Modes
 
@@ -153,6 +198,46 @@ The car has 4 operating modes that control behavior:
 └──────────────────┘  └──────────────────┘
 ```
 
+## Configuration
+
+The application uses `application.json` for configuration:
+
+```json
+{
+  "Robot": {
+    "IpAddress": "192.168.4.1",
+    "Port": 100
+  },
+  "Controls": {
+    "Keyboard": {
+      "ForwardSpeed": 100,
+      "BackwardSpeed": 100,
+      "TurnSpeed": 100
+    },
+    "Joystick": {
+      "MaxSpeed": 200,
+      "CommandThrottleMs": 100
+    },
+    "RacingWheel": {
+      "ThrottleMaxSpeed": 200,
+      "BrakeMaxSpeed": 150,
+      "SteeringFactor": 0.65,
+      "CommandThrottleMs": 80
+    }
+  }
+}
+```
+
+### Logging
+
+NLog is configured in `NLog.config`:
+- **Console**: Color-coded output for Info/Warn/Error
+- **All logs**: `logs/smartcar-{date}.log` (7 days retention)
+- **Errors only**: `logs/errors-{date}.log` (30 days retention)
+- **Racing wheel debug**: `logs/racingwheel-{date}.log` (7 days retention)
+
+Logs are automatically rotated daily and old logs are cleaned up.
+
 ## Project Structure
 
 ```
@@ -163,7 +248,12 @@ SmartCar/
 ├── VideoViewerWindow.xaml.cs    # Video rendering
 ├── ConnectionManager.cs         # TCP communication
 ├── VideoStreamViewer.cs         # MJPEG stream handler
+├── RacingWheelController.cs     # Logitech wheel support
+├── JoystickController.cs        # Joystick/gamepad support
 ├── Command.cs                   # Car command generator
+├── AppConfiguration.cs          # Configuration loader
+├── application.json             # App configuration
+├── NLog.config                  # Logging configuration
 └── SmartCar.csproj             # Project configuration
 ```
 
@@ -172,6 +262,8 @@ SmartCar/
 - **.NET 6.0 Windows** - WPF framework
 - **OpenCvSharp4** - Image processing
 - **Newtonsoft.Json** - JSON serialization
+- **SharpDX.DirectInput** - Racing wheel & joystick support
+- **NLog** - Structured logging
 - **WriteableBitmap** - High-performance rendering
 - **Async/Await** - Non-blocking I/O
 
